@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["rsl_rl"]
+
+[tool.black]
+line-length = 88
+
+[tool.pylint."FORMAT"]
+max-line-length = 88
+
+[project]
+name = "rsl_rl"
+version = "1.0.0"
+authors = [
+    { name = "Eric Bush", email = "ericbushmerp@gmail.com" },
+]
+description = "rsl_rl adapted to jax for master's thesis"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+    "tensorflow_probability",
+    "torch>=1.4.0",
+    "torchvision>=0.5.0",
+    "numpy>=1.16.4",
+    "flax>=0.8.0"
+]
