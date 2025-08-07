@@ -65,8 +65,12 @@ class ActorCriticRecurrent(ActorCritic):
 
         activation = get_activation(activation)
 
-        self.memory_a = Memory(num_actor_obs, hidden_size=rnn_hidden_size, rnn_type=rnn_type)
-        self.memory_c = Memory(num_critic_obs, hidden_size=rnn_hidden_size, rnn_type=rnn_type)
+        key = jax.random.key(0)
+        key_a, key_c = jax.random.split(key, num=2)
+        self.memory_a = Memory(nnx.Rngs({"params": key_a}), num_actor_obs, hidden_size=rnn_hidden_size,
+                               rnn_type=rnn_type)
+        self.memory_c = Memory(nnx.Rngs({"params": key_c}), num_critic_obs, hidden_size=rnn_hidden_size,
+                               rnn_type=rnn_type)
 
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
@@ -92,10 +96,11 @@ class ActorCriticRecurrent(ActorCritic):
 
 
 class Memory(nnx.Module):
-    def __init__(self, input_size: int, hidden_size: int = 256, rnn_type: str = "lstm"):
+    def __init__(self, rngs: nnx.Rngs, input_size: int, hidden_size: int = 256, rnn_type: str = "lstm"):
         self.rnn: RNNCellBase = nnx.LSTMCell(in_features=input_size,
-                                             hidden_features=hidden_size) if rnn_type.lower() == "lstm" else nnx.GRUCell(
-            in_features=input_size, hidden_features=hidden_size)
+                                             hidden_features=hidden_size,
+                                             rngs=rngs) if rnn_type.lower() == "lstm" else nnx.GRUCell(
+            in_features=input_size, hidden_features=hidden_size, rngs=rngs)
         self.hidden_states = None
 
     def __call__(self, x: jax.Array, masks=None, hidden_states=None) -> jax.Array:

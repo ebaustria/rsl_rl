@@ -28,12 +28,13 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
+import jax
+import optax
+from flax import nnx
 
 from rsl_rl.modules import ActorCritic
 from rsl_rl.storage import RolloutStorage
+
 
 class PPO:
     actor_critic: ActorCritic
@@ -62,9 +63,10 @@ class PPO:
 
         # PPO components
         self.actor_critic = actor_critic
-        self.actor_critic.to(self.device)
         self.storage = None # initialized later
-        self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
+        self.optimizer = optax.adam(learning_rate=learning_rate)
+        params = nnx.state(self.actor_critic, nnx.Param)
+        self.opt_state = self.optimizer.init(params)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -87,7 +89,7 @@ class PPO:
     def train_mode(self):
         self.actor_critic.train()
 
-    def act(self, obs, critic_obs):
+    def act(self, obs: jax.Array, critic_obs: jax.Array):
         if self.actor_critic.is_recurrent:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values

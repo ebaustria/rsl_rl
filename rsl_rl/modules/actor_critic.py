@@ -37,6 +37,10 @@ from collections.abc import Callable
 import tensorflow_probability.substrates.jax.distributions as tfd
 
 
+def make_rngs(key) -> nnx.Rngs:
+    return nnx.Rngs({"params": key})
+
+
 class ActorCritic(nnx.Module):
     is_recurrent = False
 
@@ -58,23 +62,28 @@ class ActorCritic(nnx.Module):
         mlp_input_dim_a = num_actor_obs
         mlp_input_dim_c = num_critic_obs
 
+        key = jax.random.key(0)
+        subkeys = jax.random.split(key, num=6)
+
         # Policy
-        actor_layers = [nnx.Linear(mlp_input_dim_a, actor_hidden_dims[0]), activation]
+        actor_layers = [nnx.Linear(mlp_input_dim_a, actor_hidden_dims[0], rngs=make_rngs(subkeys[0])), activation]
         for l in range(len(actor_hidden_dims)):
             if l == len(actor_hidden_dims) - 1:
-                actor_layers.append(nnx.Linear(actor_hidden_dims[l], num_actions))
+                actor_layers.append(nnx.Linear(actor_hidden_dims[l], num_actions, rngs=make_rngs(subkeys[1])))
             else:
-                actor_layers.append(nnx.Linear(actor_hidden_dims[l], actor_hidden_dims[l + 1]))
+                actor_layers.append(
+                    nnx.Linear(actor_hidden_dims[l], actor_hidden_dims[l + 1], rngs=make_rngs(subkeys[2])))
                 actor_layers.append(activation)
         self.actor = nnx.Sequential(*actor_layers)
 
         # Value function
-        critic_layers = [nnx.Linear(mlp_input_dim_c, critic_hidden_dims[0]), activation]
+        critic_layers = [nnx.Linear(mlp_input_dim_c, critic_hidden_dims[0], rngs=make_rngs(subkeys[3])), activation]
         for l in range(len(critic_hidden_dims)):
             if l == len(critic_hidden_dims) - 1:
-                critic_layers.append(nnx.Linear(critic_hidden_dims[l], 1))
+                critic_layers.append(nnx.Linear(critic_hidden_dims[l], 1, rngs=make_rngs(subkeys[4])))
             else:
-                critic_layers.append(nnx.Linear(critic_hidden_dims[l], critic_hidden_dims[l + 1]))
+                critic_layers.append(
+                    nnx.Linear(critic_hidden_dims[l], critic_hidden_dims[l + 1], rngs=make_rngs(subkeys[5])))
                 critic_layers.append(activation)
         self.critic = nnx.Sequential(*critic_layers)
 
